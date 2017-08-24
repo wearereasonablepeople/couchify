@@ -1,0 +1,5 @@
+/lib/
+/node_modules/
+/tmp/
+/.vscode/launch.json
+/.vscode/settings.json
