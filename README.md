@@ -79,7 +79,7 @@ const couchify = require('couchify').couchify
 `couchify` expects some `CouchifyOptions` and returns a `Promise`. When this promise is resolved, you get a [design document](http://guide.couchdb.org/draft/design.html) JSON back.
 
 ```ts
-export type CouchifyOptions = {
+type CouchifyOptions = {
     id?: string
     baseDocumentsDir?: string
     babelPlugins?: any[]
@@ -124,7 +124,7 @@ const deploy = require('couchify').deploy
 Deploy a CouchDB design document.
 
 ```ts
-export type DeployOptions = {
+type DeployOptions = {
     remote?: string
     db?: string
     doc?: DesignDocument
