@@ -1,6 +1,11 @@
+import * as fs from 'fs'
 import * as minimist from 'minimist'
+import * as path from 'path'
+import * as util from 'util'
 import * as client from './client'
-import { couchify, DesignDocument } from './couchify'
+import { couchify, DesignDocument, Rewrite } from './couchify'
+
+const readFileAsync = util.promisify(fs.readFile)
 
 const argv: any = minimist(process.argv.slice(2), {
     alias: {
@@ -28,13 +33,29 @@ if ((!dir && !argv.version) || argv.help) {
     console.log('v' + require(__dirname + '/../package.json').version)
     process.exit(0)
 } else {
-    couchify({
-        baseDocumentsDir: dir,
-        id: argv.name
-    }).then((result: DesignDocument) => {
+    const baseDocumentsDir = path.resolve(dir)
+
+    Promise.all([
+        couchify({ baseDocumentsDir: baseDocumentsDir, id: argv.name }),
+        readFileAsync(path.join(baseDocumentsDir, 'rewrites.json'), 'utf8')
+            .then(res => {
+                let json = []
+                try {
+                    json = JSON.parse(res)
+                } catch (e) {
+                    console.warn('malformed rewrites.json')
+                }
+                return json
+            })
+            .catch(readFileErr => [])
+    ]).then(([designDocument, rewrites]: [DesignDocument, Rewrite[]]) => {
+        if (rewrites.length) {
+            designDocument.rewrites = rewrites
+        }
+
         if (!argv.dry) {
             client
-                .deploy({ remote: argv.remote, db: argv.db, doc: result })
+                .deploy({ remote: argv.remote, db: argv.db, doc: designDocument })
                 .then(res => {
                     if (res.ok) {
                         console.log(JSON.stringify(res))
@@ -49,7 +70,7 @@ if ((!dir && !argv.version) || argv.help) {
                     throw e
                 })
         } else {
-            console.log(JSON.stringify(result, null, 2))
+            console.log(JSON.stringify(designDocument, null, 2))
         }
     }).catch(er => {
         console.error('could not couchify: ' + er.message)
