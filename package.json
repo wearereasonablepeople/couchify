@@ -10,6 +10,9 @@
     "lint": "tslint src/**/*.ts --project tsconfig.json --type-check",
     "test": "tape lib/test/**/*.js | tap-diff"
   },
+  "bin": {
+    "couchify": "cmd.js"
+  },
   "typings": "lib/index",
   "dependencies": {
     "acorn": "^5.1.1",
@@ -39,6 +42,6 @@
   },
   "files": [
     "lib",
-    "LICENSE"
+    "cmd.js"
   ]
 }
