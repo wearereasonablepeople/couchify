@@ -1,11 +1,7 @@
-import * as fs from 'fs'
 import * as minimist from 'minimist'
 import * as path from 'path'
-import * as util from 'util'
 import * as client from './client'
-import { couchify, DesignDocument, Rewrite } from './couchify'
-
-const readFileAsync = util.promisify(fs.readFile)
+import { couchify, DesignDocument, readFileAsync, Rewrite } from './couchify'
 
 const argv: any = minimist(process.argv.slice(2), {
     alias: {
@@ -66,7 +62,7 @@ if ((!dir && !argv.version) || argv.help) {
                     }
                 })
                 .catch(e => {
-                    console.error('could not deploy: ' + e.message)
+                    console.error('could not deploy: [' + e.body.error + '] ' + e.message + ' (' + e.body.reason + ')')
                     throw e
                 })
         } else {
