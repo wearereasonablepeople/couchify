@@ -11,11 +11,15 @@ export function splitUrlIntoParts(remote: string): { host: string, port: number,
     const parsedUrl = url.parse(remote)
     const protocol = parsedUrl.protocol.replace(/\:+$/, '')
 
+    let port = parsedUrl.port && parseInt(parsedUrl.port, 10)
+
+    if (!port || isNaN(port)) {
+        port = 5984
+    }
+
     return {
         host: parsedUrl.host.replace(/\:+\d+$/, ''),
-        port: parsedUrl.port
-            ? parseInt(parsedUrl.port, 10)
-            : (protocol === 'https' ? 443 : 80),
+        port,
         protocol: protocol
     }
 }
