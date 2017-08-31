@@ -1,0 +1,19 @@
+{
+    "version": "2.4.2",
+    "compilerOptions": {
+        "declaration": true,
+        "module": "commonjs",
+        "outDir": "lib",
+        "target": "es2016",
+        "experimentalDecorators": true,
+        "noUnusedLocals": true,
+        "noImplicitReturns": true,
+        "sourceMap": true
+    },
+    "include": [
+        "src/cmd.ts",
+        "src/index.ts",
+        "src/test/**/*.ts"
+    ],
+    "exclude": []
+}
