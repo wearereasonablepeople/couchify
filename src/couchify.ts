@@ -24,6 +24,13 @@ export type ViewFunctionResolution = FunctionResolution | {
     source: { map: string, reduce: string }
 }
 
+export type Rewrite = {
+    from: string
+    to: string
+    method: string
+    query: { [key: string]: string }
+}
+
 export type CouchifyOptions = {
     id?: string
     baseDocumentsDir?: string
@@ -49,6 +56,7 @@ export type DesignDocument = {
     lists?: { [key: string]: string }
     filters?: { [key: string]: string }
     updates?: { [key: string]: string }
+    rewrites?: Rewrite[]
 }
 
 const defaultOptions: CouchifyOptions = {
