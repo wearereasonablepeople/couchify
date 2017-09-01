@@ -1,0 +1,13 @@
+{
+    "_id": "_design/attachments",
+    "language": "javascript",
+    "_attachments": {
+        "foo.txt": {
+            "content_type": "text/plain; charset=utf-8",
+            "data": "dHVuIHVwCg=="
+        }
+    },
+    "shows": {
+        "simple": "function () {\n        return 'ok';\n    }"
+    }
+}

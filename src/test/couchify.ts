@@ -12,6 +12,7 @@ const extraOptions = {
     ;
 
 [
+    'attachments',
     'babel-plugin',
     'basic',
     'gamma'
