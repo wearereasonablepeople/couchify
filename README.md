@@ -2,6 +2,8 @@
 
 use next generation JS in your [CouchDB](http://couchdb.apache.org) apps.
 
+[![Build Status](https://travis-ci.org/wearereasonablepeople/couchify.svg?branch=master)](http://travis-ci.org/tetsuo/kek)
+
 `couchify` uses [babel](https://babeljs.io) to transpile your modular ES2015 application code into ES5, and will recursively analyze the `require()` calls in order to build a flat representation of your application's dependency tree in CouchDB.
 
 
