@@ -193,8 +193,11 @@ export function couchify(options: CouchifyOptions) {
                             .then(values => {
                                 const res: DesignDocument = {
                                     _id: `_design/${options.id}`,
-                                    language: 'javascript',
-                                    _attachments: attachmentsResult.reduce((acc, attachment) => {
+                                    language: 'javascript'
+                                }
+
+                                if (attachmentsResult.length) {
+                                    res._attachments = attachmentsResult.reduce((acc, attachment) => {
                                         acc[attachment.id] = { content_type: attachment.content_type, data: attachment.data }
                                         return acc
                                     }, {} as { [key: string]: Attachment })
