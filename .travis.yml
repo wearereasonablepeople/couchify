@@ -13,4 +13,4 @@ before_install:
   - sudo mv docker-compose /usr/local/bin
 
 script:
-  - docker-compose run test bash -c "cd /build && yarn && npm run lint && npm run build && npm run test"
+  - docker-compose run test bash -c "cd /build && yarn install --silent && yarn run lint && yarn run build && yarn run test"
