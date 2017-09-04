@@ -102,145 +102,141 @@ export function couchify(options: CouchifyOptions) {
     const globOptions = { ignore: options.globIgnorePatterns, nodir: true }
     const globMatchPattern = `+(${whitelistedRootDirs.join('|')})/*.{${envExtensions}}`
 
-    return new Promise((resolve, reject) => {
+    return Promise.all([
+        globPromise(globMatchPattern, { ...globOptions, ...{ cwd: baseDocumentsDir } }),
+        globPromise('**/*', { ...globOptions, ...{ cwd: attachmentsDir } })
+    ])
+        .then(([designFiles, attachments]) => {
+            const tasks =
+                designFiles.map(relativePath => {
+                    const absPath = path.join(baseDocumentsDir, relativePath)
 
-        Promise.all([
-            globPromise(globMatchPattern, { ...globOptions, ...{ cwd: baseDocumentsDir } }),
-            globPromise('**/*', { ...globOptions, ...{ cwd: attachmentsDir } })
-        ])
-            .then(([designFiles, attachments]) => {
-                const tasks =
-                    designFiles.map(relativePath => {
-                        const absPath = path.join(baseDocumentsDir, relativePath)
+                    return resolveDependencies(absPath, options).then(deps => {
+                        const entry = deps[deps.length - 1] as FunctionResolution
+                        entry.exports = extractExports(entry.source, acorn.parse(entry.source), options)
+                        entry.resolvedDeps = deps.slice(0, -1)
 
-                        return resolveDependencies(absPath, options).then(deps => {
-                            const entry = deps[deps.length - 1] as FunctionResolution
-                            entry.exports = extractExports(entry.source, acorn.parse(entry.source), options)
-                            entry.resolvedDeps = deps.slice(0, -1)
+                        const frags = relativePath.split('/')
+                        entry.type = frags[0]
 
-                            const frags = relativePath.split('/')
-                            entry.type = frags[0]
-
-                            return entry
-                        })
-                            .then(res => res)
-                            .catch((designTaskErr: Error) => {
-                                console.warn('could not extract design function: ' + designTaskErr.message)
-                                throw designTaskErr
-                            })
+                        return entry
                     })
-
-                const attachmentTasks = attachments.map(relativePath => {
-                    const absPath = path.join(attachmentsDir, relativePath)
-                    return readFileAsync(absPath)
-                        .then(data => {
-                            const contentType = mime.contentType(path.basename(absPath))
-                            return {
-                                id: relativePath,
-                                content_type: contentType || 'application/octet-stream',
-                                data: data.toString('base64')
-                            }
+                        .then(res => res)
+                        .catch((designTaskErr: Error) => {
+                            console.warn('could not extract design function: ' + designTaskErr.message)
+                            throw designTaskErr
                         })
                 })
 
-                Promise
-                    .all([Promise.all(tasks), Promise.all(attachmentTasks)])
-                    .then(([entries, attachmentsResult]) => {
-                        const resolvedDeps: DependencyResolution[] = []
-                        const rewriteTasks: Promise<any>[] = []
+            const attachmentTasks = attachments.map(relativePath => {
+                const absPath = path.join(attachmentsDir, relativePath)
+                return readFileAsync(absPath)
+                    .then(data => {
+                        const contentType = mime.contentType(path.basename(absPath))
+                        return {
+                            id: relativePath,
+                            content_type: contentType || 'application/octet-stream',
+                            data: data.toString('base64')
+                        }
+                    })
+            })
 
-                        const resolutionIndex = entries.reduce((acc, entry) => {
-                            entry.resolvedDeps
-                                .filter(d => !(acc.hasOwnProperty(d.file)))
-                                .forEach(d => {
-                                    resolvedDeps.push(d)
-                                    acc[d.file] = resolvedDeps.length - 1
-                                    rewriteTasks.push(new Promise((rewriteResolve, rewriteReject) => {
-                                        rewriteRequires(stripJSTags(d.source), name => `./${acc[d.deps[name]]}`)
-                                            .then(code => {
-                                                d.source = code
-                                                rewriteResolve(d)
-                                            }).catch(er => rewriteReject(er))
-                                    }))
-                                })
+            return Promise.all([Promise.all(tasks), Promise.all(attachmentTasks)])
+                .then(([entries, attachmentsResult]) => {
+                    const resolvedDeps: DependencyResolution[] = []
+                    const rewriteTasks: Promise<any>[] = []
 
-                            rewriteTasks.push(new Promise((rewriteResolve, rewriteReject) => {
-                                if (entry.type !== 'views') {
-                                    rewriteRequires('module.exports=' + entry.exports.default, name => `commons/${acc[entry.deps[name]]}`)
+                    const resolutionIndex = entries.reduce((acc, entry) => {
+                        entry.resolvedDeps
+                            .filter(d => !(acc.hasOwnProperty(d.file)))
+                            .forEach(d => {
+                                resolvedDeps.push(d)
+                                acc[d.file] = resolvedDeps.length - 1
+                                rewriteTasks.push(new Promise((rewriteResolve, rewriteReject) => {
+                                    rewriteRequires(stripJSTags(d.source), name => `./${acc[d.deps[name]]}`)
                                         .then(code => {
-                                            entry.source = code.slice('module.exports='.length)
-                                            rewriteResolve(entry)
+                                            d.source = code
+                                            rewriteResolve(d)
                                         }).catch(er => rewriteReject(er))
-                                } else {
-                                    Promise.all([entry.exports.map, entry.exports.reduce].map(d => {
-                                        return !d
-                                            ? null
-                                            : rewriteRequires('module.exports= ' + d, name => `views/lib/${acc[entry.deps[name]]}`)
-                                    })).then(([map, reduce]) => {
-                                        (entry as ViewFunctionResolution).source = {
-                                            map: map && map.slice('module.exports='.length),
-                                            reduce: reduce && reduce.slice('module.exports='.length)
-                                        }
+                                }))
+                            })
+
+                        rewriteTasks.push(new Promise((rewriteResolve, rewriteReject) => {
+                            if (entry.type !== 'views') {
+                                rewriteRequires('module.exports=' + entry.exports.default, name => `commons/${acc[entry.deps[name]]}`)
+                                    .then(code => {
+                                        entry.source = code.slice('module.exports='.length)
                                         rewriteResolve(entry)
                                     }).catch(er => rewriteReject(er))
-                                }
-                            }))
+                            } else {
+                                Promise.all([entry.exports.map, entry.exports.reduce].map(d => {
+                                    return !d
+                                        ? null
+                                        : rewriteRequires('module.exports= ' + d, name => `views/lib/${acc[entry.deps[name]]}`)
+                                })).then(([map, reduce]) => {
+                                    (entry as ViewFunctionResolution).source = {
+                                        map: map && map.slice('module.exports='.length),
+                                        reduce: reduce && reduce.slice('module.exports='.length)
+                                    }
+                                    rewriteResolve(entry)
+                                }).catch(er => rewriteReject(er))
+                            }
+                        }))
 
-                            return acc
-                        }, {})
+                        return acc
+                    }, {})
 
-                        Promise.all(rewriteTasks)
-                            .then(values => {
-                                const res: DesignDocument = {
-                                    _id: `_design/${options.id}`,
-                                    language: 'javascript'
-                                }
+                    return Promise.all(rewriteTasks)
+                        .then(values => {
+                            const res: DesignDocument = {
+                                _id: `_design/${options.id}`,
+                                language: 'javascript'
+                            }
 
-                                if (attachmentsResult.length) {
-                                    res._attachments = attachmentsResult.reduce((acc, attachment) => {
-                                        acc[attachment.id] = { content_type: attachment.content_type, data: attachment.data }
-                                        return acc
-                                    }, {} as { [key: string]: Attachment })
-                                }
+                            if (attachmentsResult.length) {
+                                res._attachments = attachmentsResult.reduce((acc, attachment) => {
+                                    acc[attachment.id] = { content_type: attachment.content_type, data: attachment.data }
+                                    return acc
+                                }, {} as { [key: string]: Attachment })
+                            }
 
-                                values.forEach(value => {
-                                    if (!value.hasOwnProperty('entry')) {
-                                        if (!res.hasOwnProperty('commons')) {
-                                            res.commons = {}
+                            values.forEach(value => {
+                                if (!value.hasOwnProperty('entry')) {
+                                    if (!res.hasOwnProperty('commons')) {
+                                        res.commons = {}
+                                    }
+
+                                    res.commons[String(resolutionIndex[value.id])] = value.source
+                                } else {
+                                    if (!res.hasOwnProperty(value.type)) {
+                                        res[value.type] = {}
+                                    }
+
+                                    const key = path.basename(value.file).replace(path.extname(value.file), '')
+                                    res[value.type][key] = value.source
+
+                                    const viewsLib: { [key: string]: string } = {}
+
+                                    if (value.type === 'views') {
+                                        value.resolvedDeps.forEach(d => {
+                                            viewsLib[String(resolutionIndex[d.id])] = resolvedDeps[resolutionIndex[d.id]].source
+                                        })
+                                        if (res[value.type][key].map === null) {
+                                            delete res[value.type][key].map
                                         }
-
-                                        res.commons[String(resolutionIndex[value.id])] = value.source
-                                    } else {
-                                        if (!res.hasOwnProperty(value.type)) {
-                                            res[value.type] = {}
+                                        if (res[value.type][key].reduce === null) {
+                                            delete res[value.type][key].reduce
                                         }
-
-                                        const key = path.basename(value.file).replace(path.extname(value.file), '')
-                                        res[value.type][key] = value.source
-
-                                        const viewsLib: { [key: string]: string } = {}
-
-                                        if (value.type === 'views') {
-                                            value.resolvedDeps.forEach(d => {
-                                                viewsLib[String(resolutionIndex[d.id])] = resolvedDeps[resolutionIndex[d.id]].source
-                                            })
-                                            if (res[value.type][key].map === null) {
-                                                delete res[value.type][key].map
-                                            }
-                                            if (res[value.type][key].reduce === null) {
-                                                delete res[value.type][key].reduce
-                                            }
-                                            if (Object.keys(viewsLib).length) {
-                                                res[value.type].lib = viewsLib
-                                            }
+                                        if (Object.keys(viewsLib).length) {
+                                            res[value.type].lib = viewsLib
                                         }
                                     }
-                                })
-                                resolve(res)
-                            }).catch(er => reject(er))
-                    }).catch(er => reject(er))
-            }).catch(er => reject(er))
-    })
+                                }
+                            })
+                            return res
+                        })
+                })
+        })
 }
 
 /**
