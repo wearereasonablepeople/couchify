@@ -118,7 +118,7 @@ export function couchify(options: CouchifyOptions) {
                         entry.resolvedDeps = deps.slice(0, -1)
 
                         const frags = relativePath.split('/')
-                        entry.type = frags[0]
+                        entry.type = determineDesignFunctionType(frags[0], options)
                         return entry
                     })
                 })
@@ -334,4 +334,10 @@ function stripJSTags(src: string) {
     src = src.replace(/^[\'\"]{1,}use strict[\'\"]{1,}\;\s+/, '')
     src = src.replace(new RegExp('^Object.defineProperty\\(exports\\, "__esModule"\, \{\\s+value\:\\s+true\\s+\}\\)\;'), '')
     return src.replace(/^\s+/, '')
+}
+
+const designFunctionTypes = ['filters', 'lists', 'shows', 'updates', 'views']
+
+function determineDesignFunctionType(name: string, opts: CouchifyOptions): string {
+    return designFunctionTypes[[opts.filtersDir, opts.listsDir, opts.showsDir, opts.updatesDir, opts.viewsDir].indexOf(name)]
 }
