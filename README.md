@@ -6,7 +6,6 @@ use next generation JS in your [CouchDB](http://couchdb.apache.org) apps.
 
 `couchify` uses [babel](https://babeljs.io) to transpile your modular ES2015 application code into ES5, and will recursively analyze the `require()` calls in order to build a flat representation of your application's dependency tree in CouchDB.
 
-
 # Install
 
 With `npm` or `yarn`, do:
@@ -139,11 +138,16 @@ type DeployOptions = {
 couchify DIR [OPTIONS]
 
 Options:
+  --db           Database name.         [default: default]
   -n, --name     Design document name.  [default: default]
-  -d, --db       Database name.         [default: default]
   -r, --remote   CouchDB endpoint.      [default: localhost:5984]
   -u, --user     CouchDB username.
   -p, --pass     CouchDB password.
+  --filters-dir  Filters directory.     [default: filters]
+  --lists-dir    Lists directory.       [default: lists]
+  --shows-dir    Shows directory.       [default: shows]
+  --updates-dir  Updates directory.     [default: updates]
+  --views-dir    Views directory.       [default: views]
   -y, --dry      Dry run.               [default: false]
   -v, --version  Show version number.
   -h, --help     Show this message.
