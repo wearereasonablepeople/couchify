@@ -2,9 +2,8 @@ version: '2'
 services:
     couchdb:
       image: couchdb:1.6.1
-    couchify-test:
+    test:
       image: acroyear2/alpine-node:8.4.0
-      command: bash -c "cd /build && yarn && npm run lint && npm run build && npm run test"
       links:
         - "couchdb"
       depends_on:
