@@ -118,14 +118,8 @@ export function couchify(options: CouchifyOptions) {
 
                         const frags = relativePath.split('/')
                         entry.type = frags[0]
-
                         return entry
                     })
-                        .then(res => res)
-                        .catch((designTaskErr: Error) => {
-                            console.warn('could not extract design function: ' + designTaskErr.message)
-                            throw designTaskErr
-                        })
                 })
 
             const attachmentTasks = attachments.map(relativePath => {
