@@ -70,7 +70,6 @@ if ((!dir && !argv.version) || argv.help) {
         }
     }).catch(er => {
         console.error('could not couchify: ' + er.message)
-        throw er
     })
 }
 
