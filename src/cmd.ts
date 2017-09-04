@@ -1,7 +1,9 @@
 import * as minimist from 'minimist'
 import * as path from 'path'
 import * as client from './client'
-import { couchify, CouchifyOptions, DesignDocument, readFileAsync, Rewrite } from './couchify'
+import { couchify } from './couchify'
+import { readFileAsync } from './helpers'
+import { CouchifyOptions, DesignDocument, Rewrite } from './types'
 
 const argv: any = minimist(process.argv.slice(2), {
     alias: {
@@ -68,26 +70,24 @@ if ((!dir && !argv.version) || argv.help) {
         }
 
         if (!argv.dry) {
-            client
+            return client
                 .deploy({ remote: argv.remote, db: argv.db, doc: designDocument })
                 .then(res => {
                     if (res.ok) {
                         console.log(JSON.stringify(res))
                         process.exit(0)
                     } else {
-                        console.error('unexpected response: \n' + JSON.stringify(res, null, 2))
+                        console.error('[error] unexpected response: \n' + JSON.stringify(res, null, 2))
                         process.exit(1)
                     }
                 })
-                .catch(e => {
-                    console.error('could not deploy: [' + e.body.error + '] ' + e.message + ' (' + e.body.reason + ')')
-                    throw e
-                })
         } else {
             console.log(JSON.stringify(designDocument, null, 2))
+            process.exit(0)
         }
     }).catch(er => {
-        console.error('could not couchify: ' + er.message)
+        console.error('[error] ' + er.message)
+        process.exit(1)
     })
 }
 
