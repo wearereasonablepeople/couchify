@@ -44,6 +44,7 @@ export type DesignDocument = {
     _attachments?: { [key: string]: Attachment }
     commons?: { [key: string]: string }
     views?: {
+        lib?: { [key: string]: string }
         [key: string]: string | { [key: string]: string }
     }
     shows?: { [key: string]: string }
@@ -215,14 +216,19 @@ export function couchify(options: CouchifyOptions) {
                                         value.resolvedDeps.forEach(d => {
                                             viewsLib[String(resolutionIndex[d.id])] = resolvedDeps[resolutionIndex[d.id]].source
                                         })
-                                        if (res[value.type][key].map === null) {
-                                            delete res[value.type][key].map
+
+                                        const view = (res.views[key] as any)
+
+                                        if (view.map === null) {
+                                            delete view.map
                                         }
-                                        if (res[value.type][key].reduce === null) {
-                                            delete res[value.type][key].reduce
+
+                                        if (view.reduce === null) {
+                                            delete view.reduce
                                         }
+
                                         if (Object.keys(viewsLib).length) {
-                                            res[value.type].lib = viewsLib
+                                            res.views.lib = viewsLib
                                         }
                                     }
                                 }
