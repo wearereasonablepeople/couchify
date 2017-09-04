@@ -1,39 +1,25 @@
 import * as acorn from 'acorn'
 import * as ESTree from 'estree'
+import * as fs from 'fs'
 import * as glob from 'glob'
+import * as mime from 'mime-types'
 import * as path from 'path'
+import * as util from 'util'
 const babelify = require('babelify')
 const moduleDeps = require('module-deps')
 const transformDeps = require('transform-deps')
 
-export type DependencyResolution = {
-    deps: { [s: string]: string }
-    file: string
-    id: string
-    source: string
-}
+export const readFileAsync = util.promisify(fs.readFile)
 
-export type FunctionResolution = DependencyResolution & {
-    entry?: boolean
-    exports: { [s: string]: string }
-    resolvedDeps: DependencyResolution[]
-    type: string
-}
-
-export type ViewFunctionResolution = FunctionResolution | {
-    source: { map: string, reduce: string }
-}
-
-export type Rewrite = {
-    from: string
-    to: string
-    method: string
-    query: { [key: string]: string }
+export type Attachment = {
+    content_type: string
+    data: string
 }
 
 export type CouchifyOptions = {
     id?: string
     baseDocumentsDir?: string
+    attachmentsDir?: string
     babelPlugins?: any[]
     babelPresets?: any[]
     filtersDir?: string
@@ -44,10 +30,18 @@ export type CouchifyOptions = {
     globIgnorePatterns?: string[]
 }
 
+export type DependencyResolution = {
+    deps: { [s: string]: string }
+    file: string
+    id: string
+    source: string
+}
+
 export type DesignDocument = {
     _id: string
     language: string
     _rev?: string
+    _attachments?: { [key: string]: Attachment }
     commons?: { [key: string]: string }
     views?: {
         [key: string]: string | { [key: string]: string }
@@ -59,7 +53,26 @@ export type DesignDocument = {
     rewrites?: Rewrite[]
 }
 
+export type FunctionResolution = DependencyResolution & {
+    entry?: boolean
+    exports: { [s: string]: string }
+    resolvedDeps: DependencyResolution[]
+    type: string
+}
+
+export type Rewrite = {
+    from: string
+    to: string
+    method: string
+    query: { [key: string]: string }
+}
+
+export type ViewFunctionResolution = FunctionResolution | {
+    source: { map: string, reduce: string }
+}
+
 const defaultOptions: CouchifyOptions = {
+    attachmentsDir: 'public',
     filtersDir: 'filters',
     listsDir: 'lists',
     showsDir: 'shows',
@@ -81,31 +94,21 @@ export function couchify(options: CouchifyOptions) {
         throw new Error('you must provide a ddoc id')
     }
 
+    const { filtersDir, listsDir, showsDir, updatesDir, viewsDir } = options
     const baseDocumentsDir = path.resolve(options.baseDocumentsDir)
-
-    const globOptions = {
-        ignore: options.globIgnorePatterns,
-        nodir: true
-    }
-
-    const {
-        filtersDir,
-        listsDir,
-        showsDir,
-        updatesDir,
-        viewsDir
-    } = options
-
+    const attachmentsDir = path.join(baseDocumentsDir, options.attachmentsDir)
     const whitelistedRootDirs = [filtersDir, listsDir, showsDir, updatesDir, viewsDir]
-
     const envExtensions = Object.keys(require.extensions).map(d => d.substring(1))
+    const globOptions = { ignore: options.globIgnorePatterns, nodir: true }
+    const globMatchPattern = `+(${whitelistedRootDirs.join('|')})/*.{${envExtensions}}`
 
-    return new Promise((resolve, reject) => {
-        const globMatchPattern = `+(${whitelistedRootDirs.join('|')})/*.{${envExtensions}}`
-
-        globPromise(globMatchPattern, { ...globOptions, ...{ cwd: baseDocumentsDir } })
-            .then((files) => {
-                const tasks = files.map(relativePath => {
+    return Promise.all([
+        globPromise(globMatchPattern, { ...globOptions, ...{ cwd: baseDocumentsDir } }),
+        globPromise('**/*', { ...globOptions, ...{ cwd: attachmentsDir } })
+    ])
+        .then(([designFiles, attachments]) => {
+            const tasks =
+                designFiles.map(relativePath => {
                     const absPath = path.join(baseDocumentsDir, relativePath)
 
                     return resolveDependencies(absPath, options).then(deps => {
@@ -115,12 +118,25 @@ export function couchify(options: CouchifyOptions) {
 
                         const frags = relativePath.split('/')
                         entry.type = frags[0]
-
                         return entry
                     })
                 })
 
-                Promise.all(tasks).then(entries => {
+            const attachmentTasks = attachments.map(relativePath => {
+                const absPath = path.join(attachmentsDir, relativePath)
+                return readFileAsync(absPath)
+                    .then(data => {
+                        const contentType = mime.contentType(path.basename(absPath))
+                        return {
+                            id: relativePath,
+                            content_type: contentType || 'application/octet-stream',
+                            data: data.toString('base64')
+                        }
+                    })
+            })
+
+            return Promise.all([Promise.all(tasks), Promise.all(attachmentTasks)])
+                .then(([entries, attachmentsResult]) => {
                     const resolvedDeps: DependencyResolution[] = []
                     const rewriteTasks: Promise<any>[] = []
 
@@ -164,11 +180,18 @@ export function couchify(options: CouchifyOptions) {
                         return acc
                     }, {})
 
-                    Promise.all(rewriteTasks)
+                    return Promise.all(rewriteTasks)
                         .then(values => {
                             const res: DesignDocument = {
                                 _id: `_design/${options.id}`,
                                 language: 'javascript'
+                            }
+
+                            if (attachmentsResult.length) {
+                                res._attachments = attachmentsResult.reduce((acc, attachment) => {
+                                    acc[attachment.id] = { content_type: attachment.content_type, data: attachment.data }
+                                    return acc
+                                }, {} as { [key: string]: Attachment })
                             }
 
                             values.forEach(value => {
@@ -204,11 +227,10 @@ export function couchify(options: CouchifyOptions) {
                                     }
                                 }
                             })
-                            resolve(res)
-                        }).catch(er => reject(er))
-                }).catch(er => reject(er))
-            }).catch(er => reject(er))
-    })
+                            return res
+                        })
+                })
+        })
 }
 
 /**
