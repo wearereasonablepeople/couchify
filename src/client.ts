@@ -1,5 +1,6 @@
 import * as url from 'url'
-import { DesignDocument } from './couchify'
+import { CouchifyError, ErrorType } from './error'
+import { DesignDocument } from './types'
 const NodeCouchDb = require('node-couchdb')
 
 export function splitUrlIntoParts(remote: string): { host: string, port: number, protocol: string } {
@@ -53,10 +54,10 @@ export function deploy({ remote, db, doc, user, pass }: DeployOptions) {
                     .then(({ data: insertData, headers: insertHeaders, status: insertStatus }) => {
                         return insertData
                     }, (insertErr) => {
-                        throw new Error('could not insert data')
+                        return Promise.reject(new CouchifyError(ErrorType.COULD_NOT_INSERT, `${insertErr.message}. reason: ${insertErr.body.reason}`))
                     })
             } else {
-                throw new Error('unexpected error')
+                return Promise.reject(getErr)
             }
         })
 

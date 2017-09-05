@@ -27,7 +27,8 @@
     "minimist": "^1.2.0",
     "module-deps": "^4.1.1",
     "node-couchdb": "^1.2.0",
-    "transform-deps": "^2.0.0"
+    "transform-deps": "^2.0.0",
+    "uniq": "^1.0.1"
   },
   "devDependencies": {
     "@types/acorn": "^4.0.2",
@@ -37,6 +38,7 @@
     "@types/minimist": "^1.2.0",
     "@types/node": "^8.0.24",
     "@types/tape": "^4.2.30",
+    "@types/uniq": "^0.0.27",
     "babel-plugin-transform-remove-debugger": "^6.8.5",
     "gamma": "^1.0.0",
     "rimraf": "^2.6.1",
