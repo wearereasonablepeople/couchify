@@ -1,0 +1,12 @@
+{
+    "_id": "_design/custom-dirs",
+    "language": "javascript",
+    "shows": {
+        "foo": "function () {\n        return 'show';\n    }"
+    },
+    "views": {
+        "bar": {
+            "map": " function (doc) {\n        return 'okmap';\n    }"
+        }
+    }
+}

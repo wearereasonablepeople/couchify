@@ -33,3 +33,17 @@ const extraOptions = {
         }).catch(er => t.error(er))
     })
 })
+
+test('fixtures/custom-dirs', t => {
+    let opts = {
+        id: 'custom-dirs',
+        baseDocumentsDir: fixturesDir + '/custom-dirs',
+        showsDir: 's',
+        viewsDir: 'v'
+    }
+
+    couchify(opts).then(actual => {
+        t.deepEqual(actual, require(fixturesDir + '/custom-dirs/expected.json'))
+        t.end()
+    }).catch(er => t.error(er))
+})
