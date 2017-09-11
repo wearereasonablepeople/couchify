@@ -1,1 +1,1 @@
-exports.string = 'plankton'
+exports.string = 'plankton' + (require('./foo').bar + 1)
