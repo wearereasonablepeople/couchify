@@ -262,6 +262,8 @@ function designDocument(values: FunctionResolution[], resolutionIndex, resolvedD
         }, {} as { [key: string]: Attachment })
     }
 
+    const viewsLib: { [key: string]: string } = {}
+
     values.forEach(value => {
         if (!value.hasOwnProperty('entry')) {
             if (!res.hasOwnProperty('commons')) {
@@ -277,8 +279,6 @@ function designDocument(values: FunctionResolution[], resolutionIndex, resolvedD
             const key = path.basename(value.file).replace(path.extname(value.file), '')
             res[value.type][key] = value.source
 
-            const viewsLib: { [key: string]: string } = {}
-
             if (value.type === 'views') {
                 value.resolvedDeps.forEach(d => {
                     viewsLib[String(resolutionIndex[d.id])] = resolvedDeps[resolutionIndex[d.id]].source
@@ -293,13 +293,13 @@ function designDocument(values: FunctionResolution[], resolutionIndex, resolvedD
                 if (view.reduce === null) {
                     delete view.reduce
                 }
-
-                if (Object.keys(viewsLib).length) {
-                    res.views.lib = viewsLib
-                }
             }
         }
     })
+
+    if (Object.keys(viewsLib).length) {
+        res.views.lib = viewsLib
+    }
 
     return res
 }
