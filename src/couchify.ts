@@ -3,6 +3,7 @@ import * as ESTree from 'estree'
 import * as $glob from 'glob'
 import * as mime from 'mime-types'
 import * as path from 'path'
+import * as pump from 'pump'
 import * as uniq from 'uniq'
 import { CouchifyError, ErrorType } from './error'
 import { accessAsync, readFileAsync } from './helpers'
@@ -16,7 +17,10 @@ import {
 } from './types'
 const babelify = require('babelify')
 const moduleDeps = require('module-deps')
+const moduleSort = require('deps-sort')
 const transformDeps = require('transform-deps')
+const toArray = require('stream-to-array')
+const toposort = require('toposort')
 
 const defaultOptions: CouchifyOptions = {
     attachmentsDir: 'public',
@@ -87,7 +91,9 @@ function _couchify(options: CouchifyOptions, globOptions, designFunctionDirs: st
                         resolvedDeps.push(d)
                         acc[d.file] = resolvedDeps.length - 1
                         rewriteTasks.push(
-                            rewriteRequires(stripJSTags(d.source), name => `./${acc[d.deps[name]]}`)
+                            rewriteRequires(stripJSTags(d.source), name => {
+                                return `./${acc[d.deps[name]]}`
+                            })
                                 .then(code => {
                                     d.source = code
                                     return d
@@ -169,8 +175,8 @@ function extractExports(source: string, ast: ESTree.Program, options: CouchifyOp
 
 function resolveDependencies(file: string, options: CouchifyOptions): Promise<DependencyResolution[]> {
     return new Promise((resolve, reject) => {
-        const deps = []
-        const md = moduleDeps({
+
+        const resolver = moduleDeps({
             transform: [[babelify, {
                 presets: [['es2015', {}]].concat(options.babelPresets || []),
                 plugins: options.babelPlugins || [],
@@ -180,10 +186,37 @@ function resolveDependencies(file: string, options: CouchifyOptions): Promise<De
                 sourceMaps: false
             }]]
         })
-        md.on('data', data => { deps.push(data) })
-        md.once('end', () => { resolve(deps) })
-        md.once('error', er => reject(er))
-        md.end({ file: file })
+
+        const sorter = moduleSort({ dedupe: true })
+
+        toArray(pump(resolver, sorter), (err, res) => {
+            if (err) {
+                console.log(err)
+                return reject(err)
+            }
+
+            if (res.length < 2) {
+                return resolve(res)
+            }
+
+            const graph = []
+            res.forEach(d => {
+                Object.values(d.deps).forEach(dep => {
+                    graph.push([ d.file, dep ])
+                })
+            })
+
+            const sortedDeps = toposort(graph).reverse().map(d => {
+                return res[res.findIndex(el => el.id === d)]
+            })
+
+            const entryIx = sortedDeps.findIndex(d => d.entry === true)
+            sortedDeps.push(sortedDeps.splice(entryIx, 1)[0])
+
+            resolve(sortedDeps)
+        })
+
+        resolver.end({ file: file })
     })
 }
 

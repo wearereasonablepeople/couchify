@@ -1,4 +1,3 @@
-module.exports = function() {
-    debugger
-    return 555
+module.exports = function(y) {
+    return this.x + y
 }
