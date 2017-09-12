@@ -7,11 +7,6 @@ import { CouchifyOptions, DesignDocument, Rewrite } from './types'
 
 const argv: any = minimist(process.argv.slice(2), {
     alias: {
-        'filters-dir': 'filtersDir',
-        'shows-dir': 'showsDir',
-        'views-dir': 'viewsDir',
-        'updates-dir': 'updatesDir',
-        'lists-dir': 'listsDir',
         u: 'user',
         p: 'pass',
         r: 'remote',
