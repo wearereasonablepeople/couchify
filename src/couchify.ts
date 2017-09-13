@@ -91,7 +91,7 @@ function _couchify(options: CouchifyOptions, globOptions, designFunctionDirs: st
                         resolvedDeps.push(d)
                         acc[d.file] = resolvedDeps.length - 1
                         rewriteTasks.push(
-                            rewriteRequires(stripJSTags(d.source), name => {
+                            rewriteRequires(d.source, name => {
                                 return `./${acc[d.deps[name]]}`
                             })
                                 .then(code => {
@@ -133,44 +133,64 @@ function _couchify(options: CouchifyOptions, globOptions, designFunctionDirs: st
  *
  * @param source  CommonJS source.
  */
-function extractExports(source: string, ast: ESTree.Program, options: CouchifyOptions): { [key: string]: string } | null {
-    const res: { [key: string]: string } = {}
+function extractExports(source: string): { [key: string]: string } | null {
+    const ast = acorn.parse(source)
+    const moduleExports: { [key: string]: string } = {}
 
     if (!Array.isArray(ast.body)) {
-        return res
+        return moduleExports
     }
 
     for (let node of ast.body) {
-        if (node && typeof node.type === 'string') {
-            if (node.type === 'ExpressionStatement'
-                && node.expression
-                && node.expression.type === 'AssignmentExpression'
-                && node.expression.left && node.expression.left.type === 'MemberExpression'
-                && node.expression.right && node.expression.right.type === 'FunctionExpression') {
+        if (!(node && typeof node.type === 'string')) {
+            continue
+        }
 
-                res.default = buildFunction(source, node.expression.right.body as ESTree.BlockStatement)
-                break
-            } else if (node.type === 'VariableDeclaration'
-                && node.declarations.length
-                && node.declarations[0].type === 'VariableDeclarator') {
+        if (node.type === 'ExpressionStatement'
+            && node.expression
+            && node.expression.type === 'AssignmentExpression'
+            && node.expression.left && node.expression.left.type === 'MemberExpression'
+            && node.expression.right && node.expression.right.type === 'FunctionExpression') {
+            moduleExports.default = wrapIife(stripJSTags(buildExport(source, node, node.expression.right.body)))
+            break
+        } else if (node.type === 'VariableDeclaration'
+            && Array.isArray(node.declarations)
+            && node.declarations[0].type === 'VariableDeclarator') {
 
-                const varId = node.declarations[0].id as ESTree.Identifier
-                const varAssignment = node.declarations[0].init as ESTree.AssignmentExpression
-                const varAssignmentLeft = varAssignment.left as ESTree.MemberExpression
+            const varId = node.declarations[0].id as ESTree.Identifier
+            const varAssignment = node.declarations[0].init as ESTree.AssignmentExpression
+            const varAssignmentLeft = varAssignment.left as ESTree.MemberExpression
 
-                if (varAssignmentLeft) {
-                    const varAssignmentLeftObject = varAssignmentLeft.object as ESTree.Identifier
-                    const varAssignmentLeftProperty = varAssignmentLeft.property as ESTree.Identifier
-                    if (varAssignmentLeftObject.name === 'exports' && varId.name === varAssignmentLeftProperty.name) {
-                        const varAssignmentRight = varAssignment.right as ESTree.FunctionExpression
-                        res[varId.name] = buildFunction(source, varAssignmentRight.body as ESTree.BlockStatement)
-                    }
+            if (varAssignmentLeft) {
+                const varAssignmentLeftObject = varAssignmentLeft.object as ESTree.Identifier
+                const varAssignmentLeftProperty = varAssignmentLeft.property as ESTree.Identifier
+                if (varAssignmentLeftObject.name === 'exports' && varId.name === varAssignmentLeftProperty.name) {
+                    const varAssignmentRight = varAssignment.right as ESTree.FunctionExpression
+                    moduleExports[varId.name] = wrapIife(stripJSTags(buildExport(source, node, varAssignmentRight.body)))
                 }
             }
         }
     }
 
-    return res
+    return moduleExports
+}
+
+function wrapIife(source: string): string {
+    return '(function(){\n\n' + source + '\n\n}())'
+}
+
+function stripJSTags(src: string) {
+    src = src.replace(/^[\'\"]{1,}use strict[\'\"]{1,}\;\s+/, '')
+    src = src.replace(new RegExp('^Object.defineProperty\\(exports\\, "__esModule"\, \{\\s+value\:\\s+true\\s+\}\\)\;'), '')
+    return src.replace(/^\s+/, '')
+}
+
+function buildExport(source: string, node: ESTree.Node, wrapper: ESTree.BlockStatement) {
+    const func = wrapper.body[wrapper.body.length - 1] as any
+    const code = source.slice(0, (node as any).start)
+               + source.slice(func.start, func.end)
+               + source.slice((node as any).end)
+    return code
 }
 
 function resolveDependencies(file: string, options: CouchifyOptions): Promise<DependencyResolution[]> {
@@ -236,22 +256,6 @@ function glob(pattern: string, globOptions: $glob.IOptions): Promise<string[]> {
     })
 }
 
-function buildFunction(source: string, wrapper: ESTree.BlockStatement) {
-    const node = wrapper.body.length && wrapper.body[wrapper.body.length - 1] as ESTree.ReturnStatement
-    const returnedFn = node.argument as ESTree.FunctionExpression
-    const paramNames = returnedFn.params.map((idNode: ESTree.Identifier) => idNode.name)
-    const prelude = 'function (' + paramNames.join(', ') + ') '
-    const block = returnedFn.body as any
-    const res = prelude + source.slice(block.start, block.end)
-    return res
-}
-
-function stripJSTags(src: string) {
-    src = src.replace(/^[\'\"]{1,}use strict[\'\"]{1,}\;\s+/, '')
-    src = src.replace(new RegExp('^Object.defineProperty\\(exports\\, "__esModule"\, \{\\s+value\:\\s+true\\s+\}\\)\;'), '')
-    return src.replace(/^\s+/, '')
-}
-
 const designFunctionTypes = ['filters', 'lists', 'shows', 'updates', 'views']
 
 function determineDesignFunctionType(name: string, opts: CouchifyOptions): string {
@@ -261,7 +265,7 @@ function determineDesignFunctionType(name: string, opts: CouchifyOptions): strin
 function designFunctionEntry(baseDocumentsDir: string, relativePath: string, options: CouchifyOptions) {
     return resolveDependencies(path.join(baseDocumentsDir, relativePath), options).then(deps => {
         const entry = deps[deps.length - 1] as FunctionResolution
-        entry.exports = extractExports(entry.source, acorn.parse(entry.source), options)
+        entry.exports = extractExports(entry.source)
         entry.resolvedDeps = deps.slice(0, -1)
         const frags = relativePath.split('/')
         entry.type = determineDesignFunctionType(frags[0], options)

@@ -2,11 +2,11 @@
     "_id": "_design/custom-dirs",
     "language": "javascript",
     "shows": {
-        "foo": "function () {\n        return 'show';\n    }"
+        "foo": "(function(){\n\nreturn function () {\n        return 'show';\n    };\n\n}())"
     },
     "views": {
         "bar": {
-            "map": " function (doc) {\n        return 'okmap';\n    }"
+            "map": " (function(){\n\nreturn function (doc) {\n        return 'okmap';\n    };\n\n}())"
         }
     }
 }

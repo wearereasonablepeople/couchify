@@ -8,6 +8,6 @@
         }
     },
     "shows": {
-        "simple": "function () {\n        return 'ok';\n    }"
+        "simple": "(function(){\n\nreturn function () {\n        return 'ok';\n    };\n\n}())"
     }
 }
