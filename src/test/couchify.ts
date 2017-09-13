@@ -8,8 +8,10 @@ const fixturesDir = __dirname + '/../../fixtures'
 
 const CouchDBClient = require('couchdb-client')
 
+const remoteHost = process.env.NODE_ENV === 'docker' ? 'couchdb' : 'localhost'
+
 const client = new CouchDBClient({
-    host: 'localhost',
+    host: remoteHost,
     port: 5984
 })
 
@@ -77,7 +79,7 @@ function runTests() {
 
             couchify(opts)
                 .then((doc: types.DesignDocument) => {
-                    deploy({ remote: 'localhost:5984', db: testDb, doc })
+                    deploy({ remote: `${remoteHost}:5984`, db: testDb, doc })
                         .then(res => {
                             t.ok(res.ok)
                             t.equal(res.id, doc._id)
@@ -86,7 +88,7 @@ function runTests() {
                             expected[d].forEach(pair => {
                                 const [fnName, expectedText] = pair.split(':')
                                 http.request({
-                                    host: 'localhost',
+                                    host: remoteHost,
                                     port: 5984,
                                     method: 'GET',
                                     path: `/${testDb}/${doc._id}/_show/${fnName}`

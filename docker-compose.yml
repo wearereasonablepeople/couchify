@@ -4,3 +4,12 @@ services:
     image: couchdb:1.6.1
     ports:
       - 5984:5984
+  couchify:
+    image: mhart/alpine-node:8.5.0
+    command: sh -c "cd /build && yarn && npm run build && NODE_ENV=docker npm run test"
+    links:
+      - "couchdb"
+    depends_on:
+      - couchdb
+    volumes:
+      - .:/build

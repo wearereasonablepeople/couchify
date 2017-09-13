@@ -1,4 +1,10 @@
-language: node_js
-node_js:
-  - "8"
-  - "node"
+sudo: required
+
+services:
+  - docker
+
+env:
+  DOCKER_COMPOSE_VERSION: 1.14.0
+
+script:
+  - docker-compose up --abort-on-container-exit
