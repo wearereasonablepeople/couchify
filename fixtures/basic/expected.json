@@ -1,0 +1,22 @@
+{
+  "_id": "_design/basic",
+  "language": "javascript",
+  "commons": {
+    "0": "\"use strict\";\n\nexports.bar = 41;",
+    "1": "'use strict';\n\nexports.string = 'plankton' + (require('./0').bar + 1);",
+    "2": "'use strict';\n\nexports.test = require('./1');",
+    "3": "'use strict';\n\nexports.testing = require('./2').test.string.toUpperCase();"
+  },
+  "shows": {
+    "requirey": "(function(){\n\nreturn function () {\n        var lib = require('commons/3');\n        return lib.testing;\n    };\n\n}())",
+    "simple": "(function(){\n\nvar x = 'ok';\n\nreturn function () {\n        return x;\n    };\n\n}())"
+  },
+  "views": {
+    "test": {
+      "map": " (function(){\n\nreturn function (doc) {\n        emit(doc._id, require('views/lib/0').bar);\n    };\n\n}())"
+    },
+    "lib": {
+      "0": "\"use strict\";\n\nexports.bar = 41;"
+    }
+  }
+}
