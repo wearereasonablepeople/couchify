@@ -1,3 +1,5 @@
+var x = 'ok'
+
 export default () => () => {
-    return 'ok'
+    return x
 }
