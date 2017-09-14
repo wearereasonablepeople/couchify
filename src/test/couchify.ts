@@ -2,7 +2,7 @@ import * as http from 'http'
 import * as test from 'tape'
 import { deploy } from '../client'
 import { couchify } from '../couchify'
-import * as types from '../types'
+import { DesignDocument } from '../interfaces'
 
 const fixturesDir = __dirname + '/../../fixtures'
 
@@ -78,7 +78,7 @@ function runTests() {
             }
 
             couchify(opts)
-                .then((doc: types.DesignDocument) => {
+                .then((doc: DesignDocument) => {
                     deploy({ remote: `${remoteHost}:5984`, db: testDb, doc })
                         .then(res => {
                             t.ok(res.ok)

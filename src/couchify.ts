@@ -12,9 +12,9 @@ import {
     CouchifyOptions,
     DependencyResolution,
     DesignDocument,
-    FunctionResolution,
-    ViewFunctionResolution
-} from './types'
+    FunctionResolution
+} from './interfaces'
+import { ViewFunctionResolution } from './types'
 const babelify = require('babelify')
 const moduleDeps = require('module-deps')
 const moduleSort = require('deps-sort')
