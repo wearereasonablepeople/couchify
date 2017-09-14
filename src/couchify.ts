@@ -176,7 +176,7 @@ function extractExports(source: string): { [key: string]: string } | null {
 }
 
 function wrapIife(source: string): string {
-    return '(function(){\n\n' + source + '\n\n}())'
+    return '(function(){\n\n' + source.replace(/\;$/, '') + '\n\n}())'
 }
 
 function stripJSTags(src: string) {
