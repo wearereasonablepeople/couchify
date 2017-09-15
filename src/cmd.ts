@@ -3,7 +3,7 @@ import * as path from 'path'
 import * as client from './client'
 import { couchify } from './couchify'
 import { readFileAsync } from './helpers'
-import { CouchifyOptions, DesignDocument, Rewrite } from './types'
+import { CouchifyOptions, DesignDocument, Rewrite } from './interfaces'
 
 const argv: any = minimist(process.argv.slice(2), {
     alias: {

@@ -1,6 +1,6 @@
 import * as url from 'url'
 import { CouchifyError, ErrorType } from './error'
-import { DesignDocument } from './types'
+import { DesignDocument } from './interfaces'
 const NodeCouchDb = require('node-couchdb')
 
 export function splitUrlIntoParts(remote: string): { host: string, port: number, protocol: string } {
