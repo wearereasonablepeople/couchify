@@ -1,15 +1,10 @@
 {
-    "_id": "_design/babel-plugin",
-    "language": "javascript",
-    "commons": {
-      "0": "module.exports = function () {\n    return 555;\n};"
-    },
-    "views": {
-      "foo": {
-        "map": " function (doc) {\n        var bar = require('views/lib/0');\n\n        return bar;\n    }"
-      },
-      "lib": {
-        "0": "module.exports = function () {\n    return 555;\n};"
-      }
-    }
+  "_id": "_design/babel-plugin",
+  "language": "javascript",
+  "commons": {
+    "0": "\"use strict\";\n\nmodule.exports = function (y) {\n    return this.x + y;\n};"
+  },
+  "shows": {
+    "foo": "(function(){\n\nreturn function () {\n        var bar = require('commons/0');\n        var ctx = { x: 663 };\n        return String(bar.call(ctx, 3));\n    };\n\n}())"
   }
+}

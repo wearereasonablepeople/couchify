@@ -1,3 +1,6 @@
 export * from './client'
 export * from './couchify'
+export * from './error'
+export * from './formatters'
+export * from './interfaces'
 export * from './types'

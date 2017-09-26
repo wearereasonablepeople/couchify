@@ -115,6 +115,9 @@ function runTests() {
         ;
 
     [
+        'babel-plugin',
+        'basic',
+        'gamma',
         'attachments'
     ].forEach(d => {
         test('fixtures/' + d, t => {
