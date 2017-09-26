@@ -96,23 +96,31 @@ type CouchifyOptions = {
 * `baseDocumentsDir` is where your source code is located. This directory should contain at least one of the `filtersDir`, `listsDir`, `showsDir`, `updatesDir` or `viewsDir` directories. These are respectively is been set to: `filters`, `lists`, `shows`, `updates` and `views`.
 * By default, `couchify` only applies [ES2015 preset](https://babeljs.io/docs/plugins/preset-es2015/), you can add extra Babel plugins and presets with `babelPlugins` and `babelPresets` options.
 
-### Rewrites
+### Custom fields
 
-Just add a `rewrites.json` file in your base documents folder. This file should be formatted like the following example:
+You can customize the design document by adding a `template.json` to the base
+folder. Its contents will be merged with the final design document.
 
-```
-[
+For more advanced templating, you can use a `template.js`-file exporting a
+function instead. The function will be called with the CouchifyOptions to
+produce the template.
+
+For example:
+
+```js
+module.exports = options => ({
+  name: options.id,
+  version: require('../package.json').version,
+  rewrites: [
     {
-        "from": "",
-        "to": "index.html",
-        "method": "GET",
-        "query": {}
-    },
-    ...
-]
+      from: '',
+      to: 'index.html',
+      method: 'GET',
+      query: {}
+    }
+  ]
+})
 ```
-
-See: http://docs.couchdb.org/en/1.3.0/pretty_urls.html
 
 ### Deploying
 

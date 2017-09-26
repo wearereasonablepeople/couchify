@@ -115,10 +115,11 @@ function runTests() {
         ;
 
     [
+        'attachments',
         'babel-plugin',
         'basic',
         'gamma',
-        'attachments'
+        'template'
     ].forEach(d => {
         test('fixtures/' + d, t => {
             let opts = {
