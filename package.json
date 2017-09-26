@@ -1,14 +1,16 @@
 {
   "name": "couchify",
   "description": "use next generation JS in your CouchDB apps",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "main": "lib/index.js",
   "author": "wearereasonablepeople",
   "license": "MIT",
   "scripts": {
     "build": "rimraf lib && tsc",
     "lint": "tslint src/**/*.ts --project tsconfig.json --type-check",
-    "test": "tape lib/test/**/*.js | tap-diff"
+    "pretest": "npm run build",
+    "test": "tape lib/test/**/*.js | tap-diff",
+    "release": "xyz --edit --repo git@github.com:wearereasonablepeople/couchify.git --increment"
   },
   "bin": {
     "couchify": "cmd.js"
@@ -32,7 +34,8 @@
     "stream-to-array": "^2.3.0",
     "toposort": "^1.0.3",
     "transform-deps": "^2.0.0",
-    "uniq": "^1.0.1"
+    "uniq": "^1.0.1",
+    "xyz": "^2.1.0"
   },
   "devDependencies": {
     "@types/acorn": "^4.0.2",
