@@ -6,7 +6,7 @@ services:
       - 5984:5984
   couchify:
     image: mhart/alpine-node:8.5.0
-    command: sh -c "cd /build && yarn && npm run lint && npm run build && NODE_ENV=docker npm run test"
+    command: sh -c "cd /build && yarn && npm run lint && NODE_ENV=docker npm run test"
     links:
       - "couchdb"
     depends_on:
