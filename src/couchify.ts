@@ -182,10 +182,8 @@ function rewriteRequires(src: string, fn: (name: string) => string | void): Prom
 }
 
 function designDocument(values: FunctionResolution[], resolutionIndex, resolvedDeps: DependencyResolution[], attachments: Attachment[], options: CouchifyOptions) {
-    const res: DesignDocument = {
-        _id: `_design/${options.id}`,
-        language: 'javascript'
-    }
+
+    const res: DesignDocument = createDesignDocumentTemplate(options);
 
     if (attachments.length) {
         res._attachments = attachments.reduce((acc, attachment) => {
@@ -234,4 +232,19 @@ function designDocument(values: FunctionResolution[], resolutionIndex, resolvedD
     }
 
     return res
+}
+
+function createDesignDocumentTemplate(options: CouchifyOptions): DesignDocument {
+    const overrides: DesignDocument = {
+        _id: `_design/${options.id}`,
+        language: 'javascript'
+    };
+
+    try{
+        const tmpl = require(path.resolve(options.baseDocumentsDir, 'template'));
+        const template = typeof tmpl === 'function' ? tmpl(options) : tmpl;
+        return {...template, ...overrides};
+    } catch (e) {
+        return overrides;
+    }
 }

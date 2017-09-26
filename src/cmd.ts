@@ -2,8 +2,7 @@ import * as minimist from 'minimist'
 import * as path from 'path'
 import * as client from './client'
 import { couchify } from './couchify'
-import { readFileAsync } from './helpers'
-import { CouchifyOptions, DesignDocument, Rewrite } from './interfaces'
+import { CouchifyOptions, DesignDocument } from './interfaces'
 
 const argv: any = minimist(process.argv.slice(2), {
     alias: {
@@ -46,23 +45,7 @@ if ((!dir && !argv.version) || argv.help) {
         }
     })
 
-    Promise.all([
-        couchify(options),
-        readFileAsync(path.join(baseDocumentsDir, 'rewrites.json'), 'utf8')
-            .then(res => {
-                let json = []
-                try {
-                    json = JSON.parse(res)
-                } catch (e) {
-                    console.warn('malformed rewrites.json')
-                }
-                return json
-            })
-            .catch(readFileErr => [])
-    ]).then(([designDocument, rewrites]: [DesignDocument, Rewrite[]]) => {
-        if (rewrites.length) {
-            designDocument.rewrites = rewrites
-        }
+    couchify(options).then((designDocument: DesignDocument) => {
 
         if (!argv.dry) {
             return client
@@ -84,6 +67,7 @@ if ((!dir && !argv.version) || argv.help) {
         console.error('[error] ' + er.message)
         process.exit(1)
     })
+
 }
 
 function showUsage() {

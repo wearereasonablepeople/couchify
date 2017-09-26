@@ -1,0 +1,6 @@
+{
+    "_id": "_design/template",
+    "language": "javascript",
+    "foo": "bar",
+    "baz": "template"
+}
