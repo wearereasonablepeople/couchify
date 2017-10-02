@@ -39,7 +39,6 @@
   },
   "devDependencies": {
     "@types/acorn": "^4.0.2",
-    "@types/estree": "^0.0.37",
     "@types/glob": "^5.0.32",
     "@types/mime-types": "^2.1.0",
     "@types/minimist": "^1.2.0",
