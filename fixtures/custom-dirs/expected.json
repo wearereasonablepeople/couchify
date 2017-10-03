@@ -6,7 +6,7 @@
     },
     "views": {
         "bar": {
-            "map": " (function(){\n\nreturn function (doc) {\n        return 'okmap';\n    };\n\n}())"
+            "map": "(function(){\n\nreturn function (doc) {\n        return 'okmap';\n    };\n\n}())"
         }
     }
 }

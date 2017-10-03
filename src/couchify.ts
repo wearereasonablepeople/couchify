@@ -11,7 +11,6 @@ import {
     DesignDocument,
     FunctionResolution
 } from './interfaces'
-import { ViewFunctionResolution } from './types'
 const babelify = require('babelify')
 const moduleDeps = require('module-deps')
 const moduleSort = require('deps-sort')
@@ -70,60 +69,46 @@ function _couchify(options: CouchifyOptions, globOptions, designFunctionDirs: st
         glob('**/*', { ...globOptions, ...{ cwd: attachmentsDir } })
     ]).then(([designFiles, attachmentFiles]) => {
 
-        const designTasks = designFiles
-            .map(relativePath =>
-                resolveDependencies(path.join(baseDocumentsDir, relativePath), options)
-                    .then(deps => formatAsDesignFunctionEntry(baseDocumentsDir, relativePath, deps, options)))
+        const designTasks = designFiles.map(relativePath =>
+            resolveDependencies(path.join(baseDocumentsDir, relativePath), options)
+            .then(deps => formatAsDesignFunctionEntry(relativePath, deps, options))
+        )
 
-        const attachmentTasks = attachmentFiles
-            .map(relativePath => {
-                const absPath = path.join(attachmentsDir, relativePath)
-                return readFileAsync(absPath).then(data => formatAsAttachmentEntry(attachmentsDir, relativePath, absPath, data))
-            })
+        const attachmentTasks = attachmentFiles.map(relativePath => {
+            const absPath = path.join(attachmentsDir, relativePath)
+            return readFileAsync(absPath).then(data => formatAsAttachmentEntry(attachmentsDir, relativePath, absPath, data))
+        })
 
         return Promise.all([Promise.all(designTasks), Promise.all(attachmentTasks)]).then(([entries, attachments]) => {
 
             const resolvedDeps: DependencyResolution[] = []
             const rewriteTasks: Promise<any>[] = []
+            const resolutionIndex = {}
 
-            const resolutionIndex = entries.reduce((acc, entry) => {
+            entries.forEach(entry => {
                 entry.resolvedDeps
-                    .filter(d => !(acc.hasOwnProperty(d.file)))
-                    .forEach(d => {
-                        resolvedDeps.push(d)
-                        acc[d.file] = resolvedDeps.length - 1
-                        rewriteTasks.push(
-                            rewriteRequires(d.source, name => {
-                                return `./${acc[d.deps[name]]}`
-                            })
-                                .then(code => {
-                                    d.source = code
-                                    return d
-                                })
-                        )
-                    })
-
-                rewriteTasks.push(entry.type !== 'views'
-                    ? rewriteRequires(MODULE_EXPORTS + entry.exports.default, name => `commons/${acc[entry.deps[name]]}`)
-                        .then(code => {
-                            entry.source = code.slice(MODULE_EXPORTS.length)
-                            return entry
+                .filter(d => !(resolutionIndex.hasOwnProperty(d.file)))
+                .forEach(d => {
+                    resolvedDeps.push(d)
+                    resolutionIndex[d.file] = resolvedDeps.length - 1
+                    rewriteTasks.push(
+                        rewriteRequires(d.source, name => `./${resolutionIndex[d.deps[name]]}`).then(code => {
+                            d.source = code
+                            return d
                         })
-                    : Promise.all([entry.exports.map, entry.exports.reduce].map(d => {
-                        return !d
-                            ? null
-                            : rewriteRequires(MODULE_EXPORTS + ' ' + d, name => `views/lib/${acc[entry.deps[name]]}`)
-                    })).then(([map, reduce]) => {
-                        (entry as ViewFunctionResolution).source = {
-                            map: map && map.slice(MODULE_EXPORTS.length),
-                            reduce: reduce && reduce.slice(MODULE_EXPORTS.length)
-                        }
+                    )
+                })
+
+                const depRoot = entry.path[0] === 'views' ? 'views/lib' : 'commons'
+
+                rewriteTasks.push(
+                    rewriteRequires(MODULE_EXPORTS + entry.output, name => `${depRoot}/${resolutionIndex[entry.deps[name]]}`)
+                    .then(code => {
+                        entry.source = code.slice(MODULE_EXPORTS.length)
                         return entry
                     })
                 )
-
-                return acc
-            }, {})
+            })
 
             return Promise.all(rewriteTasks).then(values => designDocument(values, resolutionIndex, resolvedDeps, attachments, options))
         })
@@ -183,7 +168,7 @@ function rewriteRequires(src: string, fn: (name: string) => string | void): Prom
 
 function designDocument(values: FunctionResolution[], resolutionIndex, resolvedDeps: DependencyResolution[], attachments: Attachment[], options: CouchifyOptions) {
 
-    const res: DesignDocument = createDesignDocumentTemplate(options);
+    const res: DesignDocument = createDesignDocumentTemplate(options)
 
     if (attachments.length) {
         res._attachments = attachments.reduce((acc, attachment) => {
@@ -195,36 +180,28 @@ function designDocument(values: FunctionResolution[], resolutionIndex, resolvedD
     const viewsLib: { [key: string]: string } = {}
 
     values.forEach(value => {
-        if (!value.hasOwnProperty('entry')) {
-            if (!res.hasOwnProperty('commons')) {
-                res.commons = {}
-            }
-
-            res.commons[String(resolutionIndex[value.id])] = value.source
-        } else {
-            if (!res.hasOwnProperty(value.type)) {
-                res[value.type] = {}
-            }
-
-            const key = path.basename(value.file).replace(path.extname(value.file), '')
-            res[value.type][key] = value.source
-
-            if (value.type === 'views') {
-                value.resolvedDeps.forEach(d => {
-                    viewsLib[String(resolutionIndex[d.id])] = resolvedDeps[resolutionIndex[d.id]].source
-                })
-
-                const view = (res.views[key] as any)
-
-                if (view.map === null) {
-                    delete view.map
-                }
-
-                if (view.reduce === null) {
-                    delete view.reduce
-                }
-            }
+        if (!value.entry) {
+            (res.commons || (res.commons = {}))[String(resolutionIndex[value.id])] = value.source
+            return
         }
+
+        let ref:any = res
+
+        value.path.forEach((k, i) => {
+            if (i === value.path.length - 1) {
+                ref[k] = value.source
+            } else {
+                ref = ref[k] || (ref[k] = {})
+            }
+        })
+
+        if (value.path[0] !== 'views') {
+            return
+        }
+
+        value.resolvedDeps.forEach(dep => {
+            viewsLib[String(resolutionIndex[dep.id])] = resolvedDeps[resolutionIndex[dep.id]].source
+        })
     })
 
     if (Object.keys(viewsLib).length) {
@@ -238,13 +215,13 @@ function createDesignDocumentTemplate(options: CouchifyOptions): DesignDocument 
     const overrides: DesignDocument = {
         _id: `_design/${options.id}`,
         language: 'javascript'
-    };
+    }
 
     try{
-        const tmpl = require(path.resolve(options.baseDocumentsDir, 'template'));
-        const template = typeof tmpl === 'function' ? tmpl(options) : tmpl;
-        return {...template, ...overrides};
+        const tmpl = require(path.resolve(options.baseDocumentsDir, 'template'))
+        const template = typeof tmpl === 'function' ? tmpl(options) : tmpl
+        return {...template, ...overrides}
     } catch (e) {
-        return overrides;
+        return overrides
     }
 }

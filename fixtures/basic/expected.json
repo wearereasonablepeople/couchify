@@ -13,7 +13,8 @@
   },
   "views": {
     "test": {
-      "map": " (function(){\n\nreturn function (doc) {\n        emit(doc._id, require('views/lib/0').bar);\n    };\n\n}())"
+      "map": "(function(){\n\nreturn function (doc) {\n        emit(doc._id, require('views/lib/0').bar);\n    };\n\n}())",
+      "reduce": "(function(){\n\nreturn function (keys) {\n        return Math.max.apply(null, keys);\n    };\n\n}())"
     },
     "lib": {
       "0": "\"use strict\";\n\nexports.bar = 41;"

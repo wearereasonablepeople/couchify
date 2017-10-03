@@ -19,10 +19,17 @@ export interface CouchifyOptions {
 }
 
 export interface DependencyResolution {
+    entry?: boolean
     deps: { [s: string]: string }
     file: string
     id: string
     source: string
+}
+
+export interface FunctionResolution extends DependencyResolution {
+    output: string
+    resolvedDeps: DependencyResolution[]
+    path: string[]
 }
 
 export interface DesignDocument {
@@ -40,13 +47,6 @@ export interface DesignDocument {
     filters?: { [key: string]: string }
     updates?: { [key: string]: string }
     rewrites?: Rewrite[]
-}
-
-export interface FunctionResolution extends DependencyResolution {
-    entry?: boolean
-    exports: { [s: string]: string }
-    resolvedDeps: DependencyResolution[]
-    type: string
 }
 
 export interface Rewrite {

@@ -132,7 +132,7 @@ function runTests() {
             }
 
             couchify(opts).then(actual => {
-                t.deepEqual(actual, require(fixturesDir + '/' + d + '/expected.json'))
+                t.deepEqual(require(fixturesDir + '/' + d + '/expected.json'), actual)
                 t.end()
             }).catch(er => t.error(er))
         })
@@ -148,7 +148,7 @@ test('fixtures/custom-dirs', t => {
     }
 
     couchify(opts).then(actual => {
-        t.deepEqual(actual, require(fixturesDir + '/custom-dirs/expected.json'))
+        t.deepEqual(require(fixturesDir + '/custom-dirs/expected.json'), actual)
         t.end()
     }).catch(er => t.error(er))
 })
