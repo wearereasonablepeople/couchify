@@ -1,16 +1,11 @@
 import * as test from 'tape'
-import { splitUrlIntoParts } from '../client'
+import { urlToCouchdbOptions } from '../client'
 
-test('split url into parts', t => {
-    t.deepEqual(splitUrlIntoParts('host'), { host: 'host', port: 5984, protocol: 'http' })
-    t.deepEqual(splitUrlIntoParts('host/a'), { host: 'host', port: 5984, protocol: 'http' })
-    t.deepEqual(splitUrlIntoParts('host/a/b'), { host: 'host', port: 5984, protocol: 'http' })
-    t.deepEqual(splitUrlIntoParts('host:34/a/b'), { host: 'host', port: 34, protocol: 'http' })
-    t.deepEqual(splitUrlIntoParts('host:34'), { host: 'host', port: 34, protocol: 'http' })
-    t.deepEqual(splitUrlIntoParts('host:34/a'), { host: 'host', port: 34, protocol: 'http' })
-    t.deepEqual(splitUrlIntoParts('https://host/a'), { host: 'host', port: 5984, protocol: 'https' })
-    t.deepEqual(splitUrlIntoParts('http://host/a'), { host: 'host', port: 5984, protocol: 'http' })
-    t.deepEqual(splitUrlIntoParts('http://host:666/a'), { host: 'host', port: 666, protocol: 'http' })
-    t.deepEqual(splitUrlIntoParts('https://host:666/a'), { host: 'host', port: 666, protocol: 'https' })
+test('url to couchdb options', t => {
+    t.deepEqual(80, urlToCouchdbOptions('https://host:80/a').port, 'should not override port number')
+    t.deepEqual(5984, urlToCouchdbOptions('https://host/a').port, 'should provide default port')
+    t.deepEqual('http', urlToCouchdbOptions('localhost').protocol, 'should provide default protocol')
+    t.deepEqual('localhost', urlToCouchdbOptions('http://localhost:80').host, 'should not include port in host')
+    t.deepEqual('magnet', urlToCouchdbOptions('magnet://localhost:80').protocol, 'should not include colon in protocol')
     t.end()
 })

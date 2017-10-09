@@ -6,18 +6,17 @@ import { CouchifyOptions, DesignDocument } from './interfaces'
 
 const argv: any = minimist(process.argv.slice(2), {
     alias: {
-        u: 'user',
-        p: 'pass',
         r: 'remote',
         n: 'name',
         y: 'dry',
         v: 'version',
-        h: 'help'
+        h: 'help',
+        t: 'timeout'
     },
     default: {
         name: 'default',
         db: 'default',
-        remote: 'localhost:5984',
+        remote: 'http://localhost:5984',
         dry: false
     }
 })
@@ -37,19 +36,25 @@ if ((!dir && !argv.version) || argv.help) {
         id: argv.name
     } as CouchifyOptions
 
-        ;
-
-    ['filters-dir', 'shows-dir', 'lists-dir', 'updates-dir', 'views-dir'].forEach(key => {
+    ;['filters-dir', 'shows-dir', 'lists-dir', 'updates-dir', 'views-dir'].forEach(key => {
         if (argv.hasOwnProperty(key)) {
             options[kebabToCamelCase(key)] = argv[key]
         }
     })
 
+
     couchify(options).then((designDocument: DesignDocument) => {
+
+        const deployOptions = {
+            remote: argv.remote,
+            db: argv.db,
+            doc: designDocument,
+            timeout: Number(argv.timeout) || 5000
+        }
 
         if (!argv.dry) {
             return client
-                .deploy({ remote: argv.remote, db: argv.db, doc: designDocument })
+                .deploy(deployOptions)
                 .then(res => {
                     if (res.ok) {
                         console.log(JSON.stringify(res))
@@ -77,9 +82,8 @@ function showUsage() {
 Options:
   --db           Database name.         [default: default]
   -n, --name     Design document name.  [default: default]
-  -r, --remote   CouchDB endpoint.      [default: localhost:5984]
-  -u, --user     CouchDB username.
-  -p, --pass     CouchDB password.
+  -r, --remote   CouchDB endpoint.      [default: http://localhost:5984]
+  -t, --timeout  CouchDB timeout (ms).  [default: 5000]
   --filters-dir  Filters directory.     [default: filters]
   --lists-dir    Lists directory.       [default: lists]
   --shows-dir    Shows directory.       [default: shows]
