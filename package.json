@@ -1,7 +1,7 @@
 {
   "name": "couchify",
   "description": "use next generation JS in your CouchDB apps",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "main": "lib/index.js",
   "author": "wearereasonablepeople",
   "license": "MIT",
