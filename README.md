@@ -132,11 +132,10 @@ Deploy a CouchDB design document.
 
 ```ts
 type DeployOptions = {
-    remote?: string
-    db?: string
-    doc?: DesignDocument
-    user?: string
-    pass?: string
+    remote: string
+    db: string
+    doc: DesignDocument
+    timeout?: number
 }
 ```
 
@@ -148,9 +147,8 @@ couchify DIR [OPTIONS]
 Options:
   --db           Database name.         [default: default]
   -n, --name     Design document name.  [default: default]
-  -r, --remote   CouchDB endpoint.      [default: localhost:5984]
-  -u, --user     CouchDB username.
-  -p, --pass     CouchDB password.
+  -r, --remote   CouchDB endpoint.      [default: http://localhost:5984]
+  -t, --timeout  CouchDB timeout (ms).  [default: 5000]
   --filters-dir  Filters directory.     [default: filters]
   --lists-dir    Lists directory.       [default: lists]
   --shows-dir    Shows directory.       [default: shows]

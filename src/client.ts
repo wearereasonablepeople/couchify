@@ -1,46 +1,31 @@
-import * as url from 'url'
+import { parse } from 'url'
 import { CouchifyError, ErrorType } from './error'
 import { DesignDocument } from './interfaces'
 const NodeCouchDb = require('node-couchdb')
 
-export function splitUrlIntoParts(remote: string): { host: string, port: number, protocol: string } {
-    if (!remote.startsWith('http')) {
-        remote = remote.replace(/^.+\:\/+/, '')
-        remote = 'http://' + remote
-    }
-
-    const parsedUrl = url.parse(remote)
-    const protocol = parsedUrl.protocol.replace(/\:+$/, '')
-
-    let port = parsedUrl.port && parseInt(parsedUrl.port, 10)
-
-    if (!port || isNaN(port)) {
-        port = 5984
-    }
-
+export function urlToCouchdbOptions(remote: string) : any {
+    const opts = parse(remote)
     return {
-        host: parsedUrl.host.replace(/\:+\d+$/, ''),
-        port,
-        protocol: protocol
+        host: opts.hostname,
+        port: Number(opts.port) || 5984,
+        protocol: opts.protocol ? opts.protocol.replace(':', '') : 'http',
+        auth: opts.auth,
+        timeout: 5000
     }
 }
 
 export type DeployOptions = {
-    remote?: string
-    db?: string
-    doc?: DesignDocument
-    user?: string
-    pass?: string
+    remote: string
+    db: string
+    doc: DesignDocument
+    timeout?: number
 }
 
-export function deploy({ remote, db, doc, user, pass }: DeployOptions) {
-    const opts = splitUrlIntoParts(remote) as DeployOptions
-
-    if (user && pass) {
-        opts.user = user
-        opts.pass = pass
+export function deploy({ remote, db, doc, timeout }: DeployOptions) {
+    const opts = urlToCouchdbOptions(remote)
+    if (timeout) {
+        opts.timeout = timeout
     }
-
     const couch = new NodeCouchDb(opts)
 
     return couch

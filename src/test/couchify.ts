@@ -79,7 +79,7 @@ function runTests() {
 
             couchify(opts)
                 .then((doc: DesignDocument) => {
-                    deploy({ remote: `${remoteHost}:5984`, db: testDb, doc })
+                    deploy({ remote: `http://${remoteHost}:5984`, db: testDb, doc })
                         .then(res => {
                             t.ok(res.ok)
                             t.equal(res.id, doc._id)
