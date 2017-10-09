@@ -9,7 +9,7 @@ export function urlToCouchdbOptions(remote: string) : any {
         host: opts.hostname,
         port: Number(opts.port) || 5984,
         protocol: opts.protocol ? opts.protocol.replace(':', '') : 'http',
-        auth: opts.auth,
+        auth: opts.auth && {user: opts.auth.split(':')[0], pass: opts.auth.split(':')[1]},
         timeout: 5000
     }
 }
