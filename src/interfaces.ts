@@ -39,9 +39,8 @@ export interface DesignDocument {
     _attachments?: { [key: string]: Attachment }
     commons?: { [key: string]: string }
     views?: {
-        lib?: { [key: string]: string }
         [key: string]: string | { [key: string]: string }
-    }
+    } & { lib?: { [key: string]: string } }
     shows?: { [key: string]: string }
     lists?: { [key: string]: string }
     filters?: { [key: string]: string }
