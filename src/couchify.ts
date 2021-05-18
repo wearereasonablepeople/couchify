@@ -217,11 +217,18 @@ function createDesignDocumentTemplate(options: CouchifyOptions): DesignDocument 
         language: 'javascript'
     }
 
+    let tmpl;
+
     try{
-        const tmpl = require(path.resolve(options.baseDocumentsDir, 'template'))
-        const template = typeof tmpl === 'function' ? tmpl(options) : tmpl
-        return {...template, ...overrides}
+        tmpl = require(path.resolve(options.baseDocumentsDir, 'template'))
     } catch (e) {
-        return overrides
+        try {
+            tmpl = require(path.resolve(options.baseDocumentsDir, 'template.cjs'))
+        } catch (e) {
+            return overrides
+        }
     }
+
+    const template = typeof tmpl === 'function' ? tmpl(options) : tmpl
+    return {...template, ...overrides}
 }
